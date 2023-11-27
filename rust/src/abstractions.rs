@@ -30,11 +30,12 @@
 //! This module contains structs that capture these abstractions so they can be investigated and,
 //! more importantly, used as inputs into machine learning models to predict future price action.
 
-use vec::Vec;
+use std::vec::Vec;
 use serde::{Serialize, Deserialize};
 use chrono::NaiveDate;
 
-
+/// PCA and clustering analyses are performed over a given timeframe
+/// i.e. what period of price action is being considered when crunching the numbers? 
 #[derive(Serialize, Deserialize)]
 pub struct TimeFrame {
     /// This represents the last trading day used to calculate an abstraction
@@ -44,8 +45,11 @@ pub struct TimeFrame {
 }
 
 
+/// Two key inputs define an abstraction context:
+/// 1) A set of tickers whose price action you wish to describe 
+/// 2) A timeframe over which their price action is considered 
 #[derive(Serialize, Deserialize)]
-pub struc AbstractionContext {
+pub struct AbstractionContext {
     /// a unique CHAR(16) string identifier for this abstraction context 
     pub abst_ctx_id: String,
     /// A name describing the intended scope of this abstraction (i.e. S&P 500 members 2019-2023)
@@ -54,6 +58,37 @@ pub struc AbstractionContext {
     pub timeframe: TimeFrame,
     /// a list of input stocks used in this abstraction context - i.e. those to be clustered and
     /// used for Principal Component Analysis 
-    pub symbols: Vec<String>,
+    pub tickers: Vec<String>,
+}
+
+pub struct PrincipalComponent {
+    /// A synthetic, arbitrary symbol used to track this component so it can be used as an input to
+    /// models like a ticker
+    pub symbol: String,
+    /// The abstraction context id in which this analysis was performed 
+    pub abst_ctx_id: String,
+    /// The rank of this component in the PCA, 1 is most important, 2 second, etc.
+    pub rank: u16,
+    /// The eigenvalue associated with this component 
+    pub eigenvalue: f16,
+    /// the percent of variance described by this component, defined as 100*eigenvalue/(sum
+    /// eigenvalues)
+    pub pct_variance: f64,
+}
+
+
+pub struct CentroidMember {
+    pub ticker: String,
+    pub corr: f64,
+}
+
+pub struct Centroid {
+    pub symbol: String,
+    pub is_mega: bool,
+    pub abst_ctx_id: String,
+    pub clst_ctx_id: String,
+    /// input tickers assigned to this centroid 
+    pub members: Vec<CentroidMember>,
+    pub keywords: Vec<String>,
 }
 
