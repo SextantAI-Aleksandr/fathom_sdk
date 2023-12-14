@@ -1,48 +1,22 @@
 
 use std::vec::Vec;
 use serde::{Serialize, Deserialize};
-use chrono::NaiveDate;
+use crate::core::TickerType;
 
+
+
+
+/// A ticker denotes a trackable, and typicaly tradeable, entity as listed by a brokerage
+/// Most tickers are just the ticker for a given stock or ETF, but FX ratios and aggregated market indicators 
+/// are included as well
 #[derive(Serialize, Deserialize)]
-pub struct DailyChange {
-    /// The date 
-    pub date: NaiveDate,
-    /// the closing price for the day 
-    pub close: f64,
-    /// the percentage change from the previous day 
-    pub pct_change: f64,
-    /// The sigma level of the change 
-    pub sigma: f64,
-}
-
-/// The TickerType enum captures that most tickers represent a stock/security,
-/// But some are a market indicator (i.e. index) and some are a FX ratio 
-pub enum TickerType {
-    /// A stock or ETF
-    Stock,
-    /// A market indicator 
-    Indicator,
-    /// A Foreign eXchange rate
-    FX,
-}
-
-/// A ticker is a symbol, typically two to five characters, indicating a security that can be
-/// traded or index that can be referenced via most brokerage / trading platforms 
 pub struct Ticker {
-    /// The type of ticker
-    pub ticker_type: TickerType,
-    /// The unique symbol identifying the ticker 
-    pub symbol: String,
-    /// The name of the stock / indicator / FX 
+    /// The type of ticker- Security, Indicator, or FX
+    pub ttype: TickerType,
+    /// The unique string, typically 2-5 characters, that identifies the ticker within an exchange 
+    pub ticker: String,
+    /// The name of the company or indicator 
     pub name: String,
-}
-
-/// The price history variable captures the daily change in price levels for a ticker
-pub struct PriceHistory {
-    /// The ticker in question
-    pub ticker: Ticker, 
-    /// A vector of DailyChange price movements over some period 
-    pub history: Vec<DailyChange>,
 }
 
 /// The UsageStats struct captures the use of a ticker either as input to predictive models or as
@@ -69,5 +43,17 @@ pub struct UsageStats {
 
 
 /// The TickerDetail struct captures a significant amout of information about a ticker: 
-pub mod TickerDetail {
+#[derive(Serialize, Deserialize)]
+pub struct TickerDetail {
+    /// The ticker itself
+    pub ticker: Ticker,
+    /// average daily volume, typically calculated over the past couple years 
+    pub avg_vol: Option<f64>,
+    /// A three-character symbol indicating the exchange
+    pub exchange: String,
+    /// statistics on the useage of this ticker as the input to a selected model
+    pub stats_input: Option<UsageStats>,
+     /// statistics on the useage of this ticker as the output from a selected model
+     pub stats_output: Option<UsageStats>,
+}
 

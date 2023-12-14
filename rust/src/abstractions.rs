@@ -32,16 +32,55 @@
 
 use std::vec::Vec;
 use serde::{Serialize, Deserialize};
-use chrono::NaiveDate;
+use crate::core::TimeFrame;
 
-/// PCA and clustering analyses are performed over a given timeframe
-/// i.e. what period of price action is being considered when crunching the numbers? 
+
+/// When a ticker is used as an input within an abstraction context,
+/// The index in which it appears as an input matrix is recorded for PCA purposes
+/// The index will be unique within an AbstractionContext and run
+/// from 0,1,2,...,n 
 #[derive(Serialize, Deserialize)]
-pub struct TimeFrame {
-    /// This represents the last trading day used to calculate an abstraction
-    pub end_date: NaiveDate, 
-    /// The lenght of time preceeding the end_date over which price action is considered 
-    pub years_history: i16,
+pub struct AbstractionInput {
+    /// The ticker for a stock/indicator/fx used as an input to the abstraction
+    pub ticker: String,
+    /// The index in which the term appears in an input matrix for PCA purposes
+    pub index: u16,
+}
+
+
+/// When a ticker us used as an input to an abstraction, the only thing that matters is the index 
+/// (and that only so you can have the same ordering along one asix of the price action matrix)
+/// In contrast, for a specific abstraction (EigenVector or (Sub/Mega)Centroid), 
+/// There are two additional items that should be known- weight and cosine similarity 
+#[derive(Serialize, Deserialize)]
+pub struct SyntheticTickerInput {
+    /// The ticker for the input
+    pub ticker: String,
+    /// For any given trading day, the sigma level of the synthetic will be the weighted average of its input tickers. 
+    /// Here is the weight of one ticker in that weighted average 
+    pub weight: f32,
+    /// The cosine similarity (-1 to +1) of the input ticker to the output synthetic
+    pub cossim: f32,
+}
+
+/// A clustering context takes the input price action from an abstraction context
+/// Using cosine similarity as a distance metric:
+/// 1) Tickers are assigned to subclusters,
+/// 2) Subclusters are assigned to clusters,
+/// 3) Subclusters are assigned to megaclusters
+/// In each case, the price history sigma is used as input (i.e. % price change/stdev of % price change),
+/// And the centroid is calculated to be a simple average of its input assignees
+/// That is, you get the price action of the centroid 
+#[derive(Serialize, Deserialize)]
+pub struct ClusteringContext {
+    /// a unique CHAR(10) string identifying the clustering context
+    pub clst_ctx_id: String,
+    /// the number of subclusters used 
+    pub ct_subc: i16,
+    /// the number of clusters used 
+    pub ct_clst: i16,
+    /// the number of megaclusters used 
+    pub ct_mega: i16,
 }
 
 
@@ -50,7 +89,7 @@ pub struct TimeFrame {
 /// 2) A timeframe over which their price action is considered 
 #[derive(Serialize, Deserialize)]
 pub struct AbstractionContext {
-    /// a unique CHAR(16) string identifier for this abstraction context 
+    /// a unique CHAR(10) string identifier for this abstraction context 
     pub abst_ctx_id: String,
     /// A name describing the intended scope of this abstraction (i.e. S&P 500 members 2019-2023)
     pub descrip: String,
@@ -58,37 +97,60 @@ pub struct AbstractionContext {
     pub timeframe: TimeFrame,
     /// a list of input stocks used in this abstraction context - i.e. those to be clustered and
     /// used for Principal Component Analysis 
-    pub tickers: Vec<String>,
+    pub inputs: Vec<AbstractionInput>,
+    /// A list of any clustering operations that have been calculated within this abstraction context, typically just one 
+    pub clustering: Vec<ClusteringContext>,
 }
 
-pub struct PrincipalComponent {
+/// Given the price action of any set of tickers over a specified timeframe, 
+/// The combined price action can be broken down into Eigenvectors, also known as principal component analysis 
+/// This struct captures key information about an eigenvector (or principal component) of an abstraction
+#[derive(Serialize, Deserialize)]
+pub struct Eigenvector {
     /// A synthetic, arbitrary symbol used to track this component so it can be used as an input to
     /// models like a ticker
     pub symbol: String,
     /// The abstraction context id in which this analysis was performed 
     pub abst_ctx_id: String,
-    /// The rank of this component in the PCA, 1 is most important, 2 second, etc.
+    /// The index/rank of this component in the PCA, 1 is most important, 2 second, etc.
     pub rank: u16,
     /// The eigenvalue associated with this component 
-    pub eigenvalue: f16,
+    pub eigenvalue: f32,
     /// the percent of variance described by this component, defined as 100*eigenvalue/(sum
     /// eigenvalues)
-    pub pct_variance: f64,
+    pub pct_variance: f32,
 }
 
 
-pub struct CentroidMember {
-    pub ticker: String,
-    pub corr: f64,
+/// This struct represents a breakdown of an eigenvector and its inputs 
+#[derive(Serialize, Deserialize)]
+pub struct EigenvectorDetail {
+    pub eigenvector: Eigenvector,
+    pub inputs: Vec<SyntheticTickerInput>,
 }
 
+
+/// The approach taken to clusterin in fathom is as follows:
+/// 1) tickers that move (very roughly) together are grouped into SubClusters, 512 by default
+/// 2) SubClusters that move (very roughly) together are grouped into Clusters, 64 by default
+/// 4) Cluster that move (very roughly) together are group into MegaClusters, 8 by default
+#[derive(Serialize, Deserialize)]
+pub enum CentroidType {
+    SubCentroid,
+    Centroid,
+    MegaCentroid,
+}
+
+/// The Centroid struct represents a (Sub/Mega)Centroid in the Sub/Cluster/Megacluster aggregating scheme.
 pub struct Centroid {
+    /// A unique symbol used to represent this centroid, similar to a ticker 
     pub symbol: String,
-    pub is_mega: bool,
+    /// The type of centroid 
+    pub ctype: CentroidType,
+    /// The id for the abstraction context in which the clustering was performed
     pub abst_ctx_id: String,
+    /// One abstraction context can have more than one clustering context (with differeing counts of subclusters / clusters / megaclusters)
     pub clst_ctx_id: String,
-    /// input tickers assigned to this centroid 
-    pub members: Vec<CentroidMember>,
-    pub keywords: Vec<String>,
+    /// input tickers or symbols assigned to this centroid 
+    pub members: Vec<SyntheticTickerInput>,
 }
-
