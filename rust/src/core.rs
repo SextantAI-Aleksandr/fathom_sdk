@@ -66,9 +66,9 @@ pub struct SymbolMetaData {
     /// The symbol itself
     pub symbol: Symbol,
     /// The count of selected models (i.e. those with some hint of predictive power) where this symbol is used as an input
-    pub input_count: i32,
+    pub input_count: i64,
     /// The count of selected models (i.e. those with some hint of predictive power) where this symbol is used as an output
-    pub output_count: i32,
+    pub output_count: i64,
 }
 
 

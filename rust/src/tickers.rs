@@ -55,5 +55,15 @@ pub struct TickerDetail {
     pub input_stats: Option<UsageStats>,
     /// statistics on the useage of this ticker as the output from a selected model
     pub output_stats: Option<UsageStats>,
+    /// a description of what the company does or what the ETF is, if available
+    pub description: Option<String>,
+    /// the industry this company operates in
+    pub industry: Option<String>,
+    /// the sector this company operates in
+    pub sector: Option<String>,
+    /// the website for this company 
+    pub website: Option<String>,
+    /// employee count
+    pub ct_employees: Option<i32>,
 }
 
