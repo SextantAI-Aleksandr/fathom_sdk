@@ -23,6 +23,17 @@ pub enum TickerType {
     FX,
 }
 
+impl TickerType {
+    pub fn from_str(s: &str) -> Self {
+        match s.as_ref() {
+            "stock" => TickerType::Stock,
+            "indicator" => TickerType::Indicator,
+            "fx" => TickerType::FX,
+            _ => TickerType::Stock, // this is the overwhelming majority
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub enum AbstractionType {
     SubCentroid,

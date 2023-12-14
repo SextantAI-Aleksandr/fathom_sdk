@@ -38,7 +38,7 @@ pub struct UsageStats {
     max_r2_cv: f64,
     /// The maximum score achieved on any model (score is a function of both training and cv
     /// performance, higher is better)
-    score: f64,
+    max_score: f64,
 }
 
 
@@ -52,8 +52,8 @@ pub struct TickerDetail {
     /// A three-character symbol indicating the exchange
     pub exchange: String,
     /// statistics on the useage of this ticker as the input to a selected model
-    pub stats_input: Option<UsageStats>,
-     /// statistics on the useage of this ticker as the output from a selected model
-     pub stats_output: Option<UsageStats>,
+    pub input_stats: Option<UsageStats>,
+    /// statistics on the useage of this ticker as the output from a selected model
+    pub output_stats: Option<UsageStats>,
 }
 
