@@ -32,8 +32,29 @@
 
 use std::vec::Vec;
 use serde::{Serialize, Deserialize};
+use chrono::NaiveDate; 
 use crate::core::TimeFrame;
 
+
+/// Abstraction, be it a clustering centroid or principal component of eigenvector decomposition, 
+/// The AbstractRow struct gives the raw output value on a given day, its normalized sigma value, 
+/// The weight fraction of input tickers upon which it was originally based that were available as of the 
+/// specified date to calculate a new value 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AbstractRow {
+    pub date: NaiveDate,
+    pub raw: f32,
+    pub sigma: f32,
+    pub weight_frac: f32
+}
+
+/// This struct is designed to capture the price history of an abstraction, in one row
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AbstractPriceHistory {
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate, 
+    pub history: Vec<AbstractRow>,
+}
 
 /// When a ticker is used as an input within an abstraction context,
 /// The index in which it appears as an input matrix is recorded for PCA purposes
@@ -154,3 +175,5 @@ pub struct Centroid {
     /// input tickers or symbols assigned to this centroid 
     pub members: Vec<SyntheticTickerInput>,
 }
+
+

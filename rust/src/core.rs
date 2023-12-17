@@ -42,6 +42,18 @@ pub enum AbstractionType {
     EigenVector,
 }
 
+impl AbstractionType {
+    pub fn from_str(s: &str) -> Self {
+        match s.as_ref() {
+            "s" => AbstractionType::SubCentroid,
+            "c" => AbstractionType::Centroid,
+            "m" => AbstractionType::MegaCentroid,
+            "e" => AbstractionType::EigenVector,
+            _ => AbstractionType::EigenVector,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub enum SymbolType {
     Real(TickerType),
