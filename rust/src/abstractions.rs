@@ -33,10 +33,12 @@
 use std::vec::Vec;
 use serde::{Serialize, Deserialize};
 use chrono::NaiveDate; 
-use hyperactive::{client, err::HypErr};
+use hyperactive::err::HypErr;
 use crate::core::TimeFrame;
 use crate::api_call::{self, DataType, CHRONO_FMT};
 
+/// constant to be used as the ?data_type= parameter for AbstractPriceHistory
+pub const DTYPE_ABST_PH: &'static str = "abst_ph";
 
 /// Abstraction, be it a clustering centroid or principal component of eigenvector decomposition, 
 /// The AbstractRow struct gives the raw output value on a given day, its normalized sigma value, 
@@ -61,7 +63,7 @@ pub struct AbstractPriceHistory {
 
 impl DataType for AbstractPriceHistory {
     fn data_type() -> &'static str {
-        "abst_ph"
+        DTYPE_ABST_PH
     }
 }
 
@@ -71,9 +73,7 @@ impl AbstractPriceHistory {
         let url = api_call::url_pk(&Self::data_type());
         let start_date = start_date.format(CHRONO_FMT);
         let end_date = end_date.format(CHRONO_FMT);
-        let url = format!("{}&symbol={}&start_date={}&end_date={}", url, &symbol, &start_date, &end_date);
-        println!("URL={}", &url);
-        
+        let url = format!("{}&symbol={}&start_date={}&end_date={}", url, &symbol, &start_date, &end_date);        
         api_call::call_api(&url).await
     }
 }

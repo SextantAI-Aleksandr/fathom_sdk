@@ -1,15 +1,19 @@
 
 use std::vec::Vec;
 use serde::{Serialize, Deserialize};
+use hyperactive::err::HypErr;
 use crate::core::TickerType;
+use crate::api_call::{self, DataType, CHRONO_FMT};
 
 
 
+/// constant to be used as the ?data_type= parameter for TickerDetail
+pub const DTYPE_TICKER: &'static str = "ticker";
 
 /// A ticker denotes a trackable, and typicaly tradeable, entity as listed by a brokerage
 /// Most tickers are just the ticker for a given stock or ETF, but FX ratios and aggregated market indicators 
 /// are included as well
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Ticker {
     /// The type of ticker- Security, Indicator, or FX
     pub ttype: TickerType,
@@ -28,7 +32,7 @@ pub struct Ticker {
 /// In other words, at least 99% of the models that are trialed are completely useless:
 /// This struct summarizes the use of a ticker in the 1% of models that might not be completely
 /// useless.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct UsageStats {
     /// The number of models containing this ticker in the specified manner (input vs output)
     count: u16,
@@ -43,7 +47,7 @@ pub struct UsageStats {
 
 
 /// The TickerDetail struct captures a significant amout of information about a ticker: 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TickerDetail {
     /// The ticker itself
     pub ticker: Ticker,
@@ -67,3 +71,34 @@ pub struct TickerDetail {
     pub ct_employees: Option<i32>,
 }
 
+impl DataType for TickerDetail {
+    fn data_type() -> &'static str {
+        DTYPE_TICKER
+    }
+}
+
+impl TickerDetail {
+    pub async fn from_api(ticker: &str) -> Result<Self, HypErr> {
+        let url = api_call::url_pk(&Self::data_type());
+        let url = format!("{}&ticker={}", url, &ticker);        
+        api_call::call_api(&url).await
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use tokio::runtime::Runtime;
+    use super::*;
+    
+
+    #[test]
+    fn test_ticker_detail() {
+        let ticker = "XOM";
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async{
+            let td = TickerDetail::from_api(ticker).await.unwrap();
+            println!("{:?}", &td)
+        })
+    }
+}

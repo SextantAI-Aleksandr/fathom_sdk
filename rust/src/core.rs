@@ -13,7 +13,7 @@ use chrono::NaiveDate;
 /// traded or index that can be referenced via most brokerage / trading platforms 
 /// The TickerType enum captures that most tickers represent a stock/security,
 /// But some are a market indicator (i.e. index) and some are a FX ratio 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum TickerType {
     /// A stock or ETF
     Stock,
