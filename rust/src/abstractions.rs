@@ -33,7 +33,9 @@
 use std::vec::Vec;
 use serde::{Serialize, Deserialize};
 use chrono::NaiveDate; 
+use hyperactive::{client, err::HypErr};
 use crate::core::TimeFrame;
+use crate::api_call::{self, DataType, CHRONO_FMT};
 
 
 /// Abstraction, be it a clustering centroid or principal component of eigenvector decomposition, 
@@ -55,6 +57,27 @@ pub struct AbstractPriceHistory {
     pub end_date: NaiveDate, 
     pub history: Vec<AbstractRow>,
 }
+
+
+impl DataType for AbstractPriceHistory {
+    fn data_type() -> &'static str {
+        "abst_ph"
+    }
+}
+
+
+impl AbstractPriceHistory {
+    pub async fn from_api(symbol: &str, start_date: &NaiveDate, end_date: &NaiveDate) -> Result<Self, HypErr> {
+        let url = api_call::url_pk(&Self::data_type());
+        let start_date = start_date.format(CHRONO_FMT);
+        let end_date = end_date.format(CHRONO_FMT);
+        let url = format!("{}&symbol={}&start_date={}&end_date={}", url, &symbol, &start_date, &end_date);
+        println!("URL={}", &url);
+        
+        api_call::call_api(&url).await
+    }
+}
+
 
 /// When a ticker is used as an input within an abstraction context,
 /// The index in which it appears as an input matrix is recorded for PCA purposes
@@ -177,3 +200,22 @@ pub struct Centroid {
 }
 
 
+#[cfg(test)]
+mod tests {
+    use tokio::runtime::Runtime;
+    use chrono::NaiveDate;
+    use super::*;
+    
+
+    #[test]
+    fn test_abstract_price_history() {
+        let symbol = "5vf8l6gztb_s_s1v4y9u";
+        let start_date = NaiveDate::from_ymd_opt(2023, 5u32, 31u32).unwrap();
+        let end_date = NaiveDate::from_ymd_opt(2023, 11u32, 2u32).unwrap();
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async{
+            let aph = AbstractPriceHistory::from_api(symbol, &start_date, &end_date).await.unwrap();
+            println!("{:?}", &aph)
+        })
+    }
+}
