@@ -66,7 +66,44 @@ def trading_day_2_weeks_ago() -> str:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
+def to_jz(obj):
+    try:
+        return obj.to_jz()
+    except AttributeError:
+        pass 
+    if type(obj).__name__ in ('int', 'float', 'str', 'bool'):
+        return obj 
+    elif type(obj).__name__ in ('list', 'tuple'):
+        return [ to_jz(x) for x in obj ] 
+    elif type(obj).__name__ == 'dict':
+        return {  k:to_jz(v) for k,v in obj.items() }
+    else:
+        return { k:to_jz(v) for k,v in vars(obj).items() }
+    
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class DatePrice:
+    # This class captures a price on a date, as well as indicating if interpolation had to be used
+    # becuase the actual price was missing
+    def __init__(self, date: str, price: float, interpolated: Optional[bool]=False):
+        self.date: str = date 
+        self.price: float = price 
+        self.interpolated: bool = interpolated
+
+
+class DateSigma:
+    # This class captures a change in price between two days
+    def __init__(self, start: DatePrice, end: DatePrice, pct_chg: float, sigma: float):
+        self.start: DatePrice = start 
+        self.end: DatePrice = end 
+        self.pct_chg: float = pct_chg 
+        self.sigma: float = sigma 
+    
+class SigmaHistory:
+    def __init__(self, history: List[DateSigma], std_dev:float):
+        self.history: List[DateSigma] = history 
+        self.std_dev: float = std_dev
+
 class TimeConfigCore:
     # The time config specifies an end_date, a number of years of history prior to that date, and a delta size in terms of trading days
     def __init__(self, 
@@ -105,12 +142,18 @@ class TimeConfigCore:
             self.delta_pairs = [ (self.select_dates[i], self.select_dates[i+delta_size]) for i in range(len(self.select_dates)-delta_size) ]
         assert self.select_dates[-1] == self.end_date # this is critical for prediction time
         assert self.delta_pairs[-1][-1] == self.end_date
+
+    def to_jz(self):
+        # custom jsonification
+        v = vars(self)
+        fields = 'start_date end_date years_history delta_size inc_offsets'.split()
+        return { k:v[k] for k in fields }
         
 
     def gap_fill_daily(self,
             daily_prices: List[Tuple[str, float]],  # A list of (date, price): i.e.  [('2022-03-15', 100), ('2022-03-16', 103), ('2022-03-18', 98), etc.]
             min_integrity:Optional[float]=0.95      # Throw an error if you have to fill gaps for more than 100*(1-min_integrity)% of the dates
-            ):
+            ) -> Tuple[List[Tuple[str, float]], List[DatePrice]]:
         # as long as daily_prices has the correct starting and ending days, interpolate any gaps
         # and by interpolate I mean assume nothing changed
         if daily_prices[0][0] != self.start_date:
@@ -122,16 +165,22 @@ class TimeConfigCore:
         last_price = daily_prices[0][1]
         lookup = { k:v for k,v in daily_prices }
         contiguous_prices = []
+        date_prices = []
         for date in self.trading_days:
             price = lookup.get(date, last_price)
             contiguous_prices.append((date, price))
+            if date in lookup:
+                date_prices.append(DatePrice(date, price))
+            else:
+                date_prices.append(DatePrice(date, price, interpolated=True))
             last_price = price
-        return contiguous_prices 
+        return contiguous_prices, date_prices
 
 
     def sigmas(self, daily_prices: List[Tuple[str, float]], **kwargs):
         # given daily prices, convert it into a list of [start_date, end_date, pct_chg, sigma_level]
-        contiguous_prices = self.gap_fill_daily(daily_prices, **kwargs)
+        # see also .sigma_history() which is similar
+        contiguous_prices, date_prices = self.gap_fill_daily(daily_prices, **kwargs)
         lookup = { k:v for k,v in contiguous_prices }
         pair_changes, pct_changes = [], []
         for start_date, end_date in self.delta_pairs:
@@ -143,6 +192,22 @@ class TimeConfigCore:
         x_stdev = statistics.stdev(pct_changes)
         sigmas = [ (x[0],x[1],x[2]/x_stdev) for x in pair_changes]
         return sigmas, x_stdev 
+    
+
+    def sigma_history(self, daily_prices: List[Tuple[str, float]], **kwargs) -> SigmaHistory:
+        # given daily prices, convert it into a list of [DateSigma]
+        # See also .sigmas() which is similar
+        _, date_prices = self.gap_fill_daily(daily_prices, **kwargs)
+        lookup = { dp.date:dp for dp in date_prices }
+        proto = [] # proto results: you will need to divide by stdev
+        for start_date, end_date in self.delta_pairs:
+            start: DatePrice = lookup[start_date]
+            end: DatePrice = lookup[end_date]
+            pct_chg = 100*(end.price - start.price)/(start.price + 1e-5)
+            proto.append((start, end, pct_chg))
+        std_dev = statistics.stdev([ x[2] for x in proto ])
+        history = [ DateSigma(start, end, pct_chg, pct_chg/std_dev) for start, end, pct_chg in proto ]
+        return SigmaHistory(history, std_dev)
 
 
     def sequences(self,
@@ -166,7 +231,7 @@ class TimeConfigCore:
         if type(prediction_deltas).__name__ == 'int':
             prediction_deltas = [prediction_deltas] # prediction deltas should be a list of integers
         sequences, x_stdev = self.sequences(daily_prices, seq_length, **kwargs)
-        contiguous_prices = self.gap_fill_daily(daily_prices, **kwargs)
+        contiguous_prices, date_prices = self.gap_fill_daily(daily_prices, **kwargs)
         lookup = { k:v for k,v in contiguous_prices} # date -> price
         xy_temp, changes_temp = [], []
         for seq_start, seq_end, x_sigmas in sequences:
@@ -280,7 +345,7 @@ def test_tc_gap_fill():
     # ensure the gap fill function fills gaps correctly
     tc = TimeConfigCore('2022-03-24', 1.4/52, 2)
     daily_prices = [('2022-03-15', 100), ('2022-03-16', 103), ('2022-03-18', 98), ('2022-03-21',101), ('2022-03-22',107), ('2022-03-24',110)]
-    contiguous_prices = tc.gap_fill_daily(daily_prices, min_integrity=0.5)
+    contiguous_prices, date_prices = tc.gap_fill_daily(daily_prices, min_integrity=0.5)
     assert contiguous_prices == [('2022-03-15', 100), ('2022-03-16', 103), ('2022-03-17', 103), ('2022-03-18', 98), ('2022-03-21', 101),
         ('2022-03-22', 107), ('2022-03-23', 107), ('2022-03-24', 110)]
 
