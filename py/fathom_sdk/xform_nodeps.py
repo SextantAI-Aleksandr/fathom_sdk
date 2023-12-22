@@ -28,6 +28,15 @@ class StartDateError(Exception):
 
 class EndDateError(Exception):
     pass # gap_fill_daily was given the wrong start_date
+
+class HistorySmallerThanSequence(Exception):
+    # This exception is raised if you try to make a prediction with a less data history than the sequence length
+    def __repr__(self):
+        return 'It seems you are trying to assemble a sequence longer than the actual price history provided. That won\'t work.'
+
+class SequenceWrongEndDate(Exception):
+    def __repr__(self):
+        return 'The sequence did not have the expected end_date'
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -221,7 +230,10 @@ class TimeConfigCore:
             sequences = [ (sigmas[i][0], sigmas[i+seq_length-1][1], [sigmas[i+j][2] for j in range(seq_length)]) for i in range(len(sigmas)-seq_length+1)]
         elif self.inc_offsets:
             sequences = [ (sigmas[i][0], sigmas[i+(seq_length-1)*(self.delta_size)][1], [sigmas[i+self.delta_size*sq][2] for sq in range(seq_length)]) for i in range(len(sigmas)-self.delta_size*(seq_length-1)) ]
-        assert sequences[-1][1] == self.end_date
+        if sequences == []:
+            raise HistorySmallerThanSequence
+        if sequences[-1][1] != self.end_date:
+            raise SequenceWrongEndDate
         return sequences, x_stdev 
 
 
@@ -236,15 +248,20 @@ class TimeConfigCore:
         xy_temp, changes_temp = [], []
         for seq_start, seq_end, x_sigmas in sequences:
             future_indexes = [ self.trading_days.index(seq_end) + days_ahead for days_ahead in prediction_deltas ]
-            if max(future_indexes) > len(self.trading_days) - 1:
-                continue 
+            if prediction_deltas != []: 
+                # prediction_deltas = [] at prediction time
+                if max(future_indexes) > len(self.trading_days) - 1:
+                    continue 
             future_dates = [ self.trading_days[f_idx] for f_idx in future_indexes ]
             future_prices = [ lookup[future_date] for future_date in future_dates ]
             seq_end_price = lookup[seq_end]
             future_pct_changes = [ 100*(future_price-seq_end_price)/seq_end_price for future_price in future_prices ]
             changes_temp.append(future_pct_changes)
             xy_temp.append((seq_start, seq_end, future_dates, x_sigmas, future_pct_changes))
-        y_stdev = [ statistics.stdev([ future_pct_changes[di] for future_pct_changes in changes_temp]) for di in range(len(prediction_deltas)) ]
+        try:
+            y_stdev = [ statistics.stdev([ future_pct_changes[di] for future_pct_changes in changes_temp]) for di in range(len(prediction_deltas)) ]
+        except statistics.StatisticsError:
+            y_stdev = [ 999 for di in range(len(prediction_deltas)) ] # mp.prediction_data() provides no y-values so there is nothing to take a standard deviation of
         xy_single = [ {'seq_start':seq_start, 'seq_end':seq_end, 'future_dates':future_date, 'x_seq_sigmas':sigmas, 'y_future_sigmas':[future_pct_changes[di]/(y_stdev[di]+1e-5) for di in range(len(future_pct_changes))]} for seq_start, seq_end, future_date, sigmas, future_pct_changes in xy_temp ]
         return xy_single, x_stdev, y_stdev
 
