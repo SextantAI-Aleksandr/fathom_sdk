@@ -18,6 +18,8 @@ class FuturePrice:
         self.pct_chg: float = pct_chg       # The percentage change in stock price, given by sigma*std_dev 
         self.future_price: float = future_price # The predicted future price, given by current_price*(100+pct_chg)/100
 
+    def __repr__(self):
+        return 'FuturePrice({:.1f}% in {}days)'.format(self.pct_chg, self.days_ahead)
 
 class DeltaSet:
     # The DeltaSet reflects the fact that many models are trained to predict the price movement for a stock at more than one
@@ -27,9 +29,13 @@ class DeltaSet:
         self.from_date: str = from_date             # The model predictions based on the sequence of closing prices up to this date (inclusive)
         self.closing_price: float = float           # The closing price for the specified stock on from_date
         self.deltas: List[FuturePrice] = deltas     # Predictions at one or more days_ahead intervals in the future 
+    
+    def __repr__(self):
+        l = ', '.join(['{}'.format(fp) for fp in self.deltas ])
+        return 'DeltaSet({} -> {})'.format(self.from_date, l)
 
 
-class Predictions:
+class PredictionHistory:
     # The prediction class captures multiple DeltaSets of predicted price movements from one model, with one entry
     # for each date on which the closing prices were used to make a prediction
     def __init__(self, pmut_id: str, architecture: str, input_tickers: List[str], output_ticker: str, pred_history:List[DeltaSet]):
@@ -38,4 +44,7 @@ class Predictions:
         self.input_tickers: List[str] = input_tickers    # the list of input tickers used for this model 
         self.output_ticker: str = output_ticker          # the ticker for the stock being prediced
         self.pred_history: List[DeltaSet] = pred_history # A list of prediction DeltaSets by closing date
+
+    def __repr__(self):
+        return 'PredictionHistory({}: {}->{})'.format(self.pmut_id, self.input_tickers, self.output_ticker)
 
