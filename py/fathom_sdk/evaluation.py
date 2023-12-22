@@ -57,6 +57,13 @@ EXIT_NUMPY_NAN =        'numpy_nan'     # NUMPY NAN encountered
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
+def model_sha1(model: torch.nn.Module) -> str:
+    # return the sha1 hash of a model to verify its integrity
+    buff = BytesIO()
+    torch.save(model.state_dict(), buff)
+    mbytes = buff.getvalue()
+    return sha1(mbytes).hexdigest()
+
 
 class BestModel:
     # This class contains the things you need to save a model binary to memory
