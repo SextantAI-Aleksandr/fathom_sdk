@@ -5,7 +5,7 @@
 # described in architectures.py with various combinations hyperparameters and input and output stocks. 
 
 
-from typing import List
+from typing import List, Dict
 
 
 
@@ -38,13 +38,13 @@ class DeltaSet:
 class PredictionHistory:
     # The prediction class captures multiple DeltaSets of predicted price movements from one model, with one entry
     # for each date on which the closing prices were used to make a prediction
-    def __init__(self, pmut_id: str, architecture: str, input_tickers: List[str], output_ticker: str, pred_history:List[DeltaSet]):
+    def __init__(self, pmut_id: str, architecture: str, input_tickers: List[str], output_tickers: List[str], pred_histories: Dict[str,List[DeltaSet]]):
         self.pmut_id: str = pmut_id 
         self.architecture: str = architecture            # A string uniquely identifying the architecture used in this model 
         self.input_tickers: List[str] = input_tickers    # the list of input tickers used for this model 
-        self.output_ticker: str = output_ticker          # the ticker for the stock being prediced
-        self.pred_history: List[DeltaSet] = pred_history # A list of prediction DeltaSets by closing date
+        self.output_tickers: List[str] = output_tickers  # the (list of) output ticker(s) for the stock prices being predicted
+        self.pred_histories: Dict[str, List[DeltaSet]] = pred_histories # {output_ticker => list of prediction DeltaSets by closing date}
 
     def __repr__(self):
-        return 'PredictionHistory({}: {}->{})'.format(self.pmut_id, self.input_tickers, self.output_ticker)
+        return 'PredictionHistory({}: {}->{})'.format(self.pmut_id, self.input_tickers, self.output_tickers)
 

@@ -247,6 +247,8 @@ class TimeConfigCore:
         lookup = { k:v for k,v in contiguous_prices} # date -> price
         xy_temp, changes_temp = [], []
         for seq_start, seq_end, x_sigmas in sequences:
+            # Don't change the order of list comprehension for future_indexes (by reversing prediction_deltas)
+            # so it matches the interpretation of output tensors
             future_indexes = [ self.trading_days.index(seq_end) + days_ahead for days_ahead in prediction_deltas ]
             if prediction_deltas != []: 
                 # prediction_deltas = [] at prediction time
