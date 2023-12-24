@@ -121,7 +121,7 @@ class GradientDescentHistory:
         if report:
             print('  epoch={}   elapsed={:.0f}s   r2/cv={:.3f}/{:.3f}   loss/cv={:.3f}/{:.3f}   pct_bs/cv={:.0f}/{:.0f}  {} '.format(epoch, self.elapsed, gds.train.r2, gds.cv.r2, gds.train.loss, gds.cv.loss, gds.train.pct_bs, gds.cv.pct_bs, summary), end='\r')
         # test for various exit conditions
-        minimum_try = ( (self.elapsed > 30) and (epoch > 12) )
+        minimum_try = ( (self.elapsed > 15) and (epoch > 12) )
         if minimum_try and (gds.train.r2 > 0.25) and (gds.cv.r2 < 0.02):
             return EXIT_OVERFIT_R2
         if minimum_try and  (gds.train.r2 > 0.4) and (gds.cv.r2 < 0.05):
