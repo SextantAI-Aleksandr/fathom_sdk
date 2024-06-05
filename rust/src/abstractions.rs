@@ -53,8 +53,10 @@ pub struct AbstractRow {
 }
 
 /// This struct is designed to capture the price history of an abstraction, in one row
+/// It is the abstraction equivalent to tickers::TickerPriceHistory
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AbstractPriceHistory {
+    pub symbol: String,
     pub start_date: NaiveDate,
     pub end_date: NaiveDate, 
     pub history: Vec<AbstractRow>,

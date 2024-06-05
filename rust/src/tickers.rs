@@ -1,5 +1,6 @@
 
 use std::vec::Vec;
+use chrono::NaiveDate;
 use serde::{Serialize, Deserialize};
 use hyperactive::err::HypErr;
 use crate::core::TickerType;
@@ -83,6 +84,25 @@ impl TickerDetail {
         let url = format!("{}&ticker={}", url, &ticker);        
         api_call::call_api(&url).await
     }
+}
+
+
+
+// This simple struct represents the price of one ticker on one date
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TickerPrice {
+    pub date: NaiveDate,
+    pub price: f64,
+}
+
+/// This struct is designed to capture the price history of a ticker
+/// It is the ticker equivalent to abstractions::AbstractPriceHistory
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TickerPriceHistory {
+    pub ticker: String,
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate, 
+    pub history: Vec<TickerPrice>,
 }
 
 

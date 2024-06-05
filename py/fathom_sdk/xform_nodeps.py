@@ -75,6 +75,15 @@ def trading_day_2_weeks_ago() -> str:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
+def str_to_date(date_str: str):
+    # convert a string to a date 
+    return datetime.strptime(date_str, '%Y-%m-%d').date()
+
+def days_between(start_date, end_date) -> int:
+    start_do = str_to_date(start_date)  # start date object
+    end_do = str_to_date(end_date)      # end date object
+    return (end_do - start_do).days
+
 def to_jz(obj):
     try:
         return obj.to_jz()
@@ -119,7 +128,8 @@ class TimeConfigCore:
             end_date: str,          # the last trading day to consider, i.e. '2022-11-31'
             years_history: int,     # the number of years of history of trading data you want to use, i.e. 10 etc
             delta_size: int,        # Calculate price changes between n consecutive business days 
-            inc_offsets:Optional[bool]=True
+            inc_offsets:Optional[bool]=True,
+            start_date:Optional[str]=None   # optional override to set an exact start_date
             ):
         # construct a 'TimeConfig': given an end_date, the # of years of history you want, and the delta_size (in days)
         # verify integrity
@@ -128,7 +138,13 @@ class TimeConfigCore:
         assert delta_size >= 1 
         assert end_date == this_or_next_trading_day(end_date)   # ensure the user specified a valid trading day to end on
         # determine the start date and schedule
-        start_date = this_or_next_trading_day(plus_years(end_date, -years_history))
+        if start_date:
+            # If an exact start_date was specified override the years_history
+            years_history = days_between(start_date, end_date)/365
+        else:
+            # by default calculate the start_date based on the end date and years_history
+            start_date = plus_years(end_date, -years_history)
+        start_date = this_or_next_trading_day(start_date) # regardless of where start_date came from, ensure it is a trading day
         schedule = nyse.schedule(start_date=start_date, end_date=end_date)
         # assign properties
         self.start_date: str = start_date
@@ -151,6 +167,7 @@ class TimeConfigCore:
             self.delta_pairs = [ (self.select_dates[i], self.select_dates[i+delta_size]) for i in range(len(self.select_dates)-delta_size) ]
         assert self.select_dates[-1] == self.end_date # this is critical for prediction time
         assert self.delta_pairs[-1][-1] == self.end_date
+
 
     def to_jz(self):
         # custom jsonification
