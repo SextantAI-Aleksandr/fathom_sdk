@@ -80,9 +80,9 @@ class Metrics:
     # and captures various metric that indicate how good the fit is
     def __init__(self, criterion, y_pred, y_act):
         loss_object = criterion(y_pred, y_act)
-        self.loss: float = loss_object.item()
-        self.r2: float = r2(y_pred, y_act)
-        self.pct_bs: float = percent_bs(y_act, y_pred)
+        self.loss: float = float(loss_object.item() # added forced conversion Aug 2025)
+        self.r2: float = float(r2(y_pred, y_act)) # aug 2025
+        self.pct_bs: float = float(percent_bs(y_act, y_pred)) # aug 2025
 
 
 class GradientDescentState:
